@@ -25,7 +25,7 @@ var mysqlConnection=mysql.createConnection({
     host:'localhost',
     user: 'root',
     password:'',
-    database: 'finance'
+    database: 'evertzemployee'
 })
 
 
@@ -44,7 +44,7 @@ app.get('/payroll',function(req,res)
 app.get('/edit-details/:id',function(req,res)
 {
     var emp_id=req.params.id;
-    mysqlConnection.query("select * from test where id='"+emp_id+"'",function(err,result)
+    mysqlConnection.query("select * from payroll_management where id='"+emp_id+"'",function(err,result)
     {
         if(err)
         {
@@ -64,7 +64,7 @@ app.post('/edit-details/modifyDetails/:id',urlencodedParser,function(req,res)
     console.log(req.body);
     console.log(date_string)
     var emp_id=req.params.id
-    mysqlConnection.query("update test set date='"+req.body.date+"', employee_id='"+req.body.employee_id+"', employee_name='"+req.body.employee_name+"', designation_id='"+req.body.designation+"', annual_ctc='"+req.body.annual_ctc+"', professional_tax='"+req.body.professional_tax+"', income_tax='"+req.body.income_tax+"', provident_fund='"+req.body.provident_fund+"',esic='"+req.body.esic+"' where id='"+emp_id+"'",function(err,result)
+    mysqlConnection.query("update  set date='"+req.body.date+"', employee_id='"+req.body.employee_id+"', employee_name='"+req.body.employee_name+"', designation_id='"+req.body.designation+"', annual_ctc='"+req.body.annual_ctc+"', professional_tax='"+req.body.professional_tax+"', income_tax='"+req.body.income_tax+"', provident_fund='"+req.body.provident_fund+"',esic='"+req.body.esic+"' where id='"+emp_id+"'",function(err,result)
     {
         if(err)
         {
@@ -79,7 +79,7 @@ app.post('/edit-details/modifyDetails/:id',urlencodedParser,function(req,res)
 })
 
 app.get('/contact-success', function(req, res) {
-    mysqlConnection.query("select * from  test order by id desc limit 0,10",function(err,result){
+    mysqlConnection.query("select * from  payroll_management order by id desc limit 0,10",function(err,result){
         if(err)
         {
             throw err
@@ -107,7 +107,7 @@ app.get('/prev',function(req,res)
     {
         page_no=page_no-1;
         new_limit=(page_no*10);
-        mysqlConnection.query("select * from test order by id desc limit "+new_limit+",10",function(err,result)
+        mysqlConnection.query("select * from payroll_management order by id desc limit "+new_limit+",10",function(err,result)
     {
         if(err)
         {
@@ -123,7 +123,7 @@ app.get('/prev',function(req,res)
     }
     else
     {
-        mysqlConnection.query("select * from test order by id desc limit 0,10",function(err,result)
+        mysqlConnection.query("select * from payroll_management order by id desc limit 0,10",function(err,result)
     {
         if(err)
         {
@@ -144,7 +144,7 @@ app.get('/next',function(req,res)
     var new_limit;
     page_no=page_no+1;
     new_limit=(page_no*10);
-        mysqlConnection.query("select * from test order by id desc limit "+new_limit+",10",function(err,result)
+        mysqlConnection.query("select * from payroll_management order by id desc limit "+new_limit+",10",function(err,result)
     {
         if(err)
         {
@@ -161,7 +161,7 @@ app.get('/next',function(req,res)
 app.post('/myaction',urlencodedParser,(req,res)=>{
     req.body.date=now.toString()
     console.log(req.body)
-    mysqlConnection.query("insert into test (id, date, employee_id, employee_name, designation_id, annual_ctc, professional_tax, income_tax, provident_fund, esic) values ('','"+req.body.date+"','"+req.body.employee_id+"','"+req.body.employee_name+"','"+req.body.designation+"','"+req.body.annual_ctc+"','"+req.body.professional_tax+"','"+req.body.income_tax+"','"+req.body.provident_fund+"','"+req.body.esic+"')",
+    mysqlConnection.query("insert into payroll_management (ID,EMP_ID,TRANSACTION_DATE,BASIC_SALARY,HRA,SA,PROFESSIONA_TAX,TAX_DETUCTION_FROM_SORCE,STANDARD_DETUCTION,OTHERS_DETUCTION,NET_AMOUNT) values ('1','"+req.body.employee_id+"','"+req.body.date+"','"+req.body.basic_salary+"','"+req.body.hra+"','"+req.body.sa+"','"+req.body.professional_tax+"','"+req.body.tax_deduction_from_source+"','"+req.body.standard_deduction+"','"+req.body.other_deduction+"','"+req.body.net_amount+"')",
     function(err)
     {
         if(err)
