@@ -2,6 +2,7 @@ const mysql=require("mysql")
 const express=require('express')
 var path=require("path")
 var ejs=require('ejs')
+const session=require('express-session')
 
 var app=express();
 const port = process.env.PORT || 1915;
@@ -11,9 +12,27 @@ app.set('view engine', 'ejs');
 
 var urlencodedParser = bodyParser.urlencoded({ extended: false });
 
+app.use(session({secret: 'qweasdzxc',saveUninitialized:true, resave: false}))
+
 var dir = path.join(__dirname, 'public');
 
+var authenticate=function(req,res,next)
+{
+    if(req.session.isAuthenticated)
+    {
+        return next()
+    }
+    else
+    {
+        res.redirect("../login")
+    }
+}
+
+app.set('views', __dirname + '/views');
+
 app.use(express.static(dir));
+app.use('/secret',authenticate, express.static(path.join(__dirname, 'secret')));
+
 
 var obj={}
 
@@ -25,26 +44,45 @@ var mysqlConnection=mysql.createConnection({
     host:'localhost',
     user: 'root',
     password:'',
-    database: 'finance'
+    database: 'evertzemployee'
 })
 
-
-app.get("/",function(req,res){
-    res.redirect("/payroll");
+app.all("/",function(req,res){
+    res.redirect("secret/payroll");
 })
 
-app.get('/payroll',function(req,res)
+app.get('/secret/payroll',function(req,res)
 {
-            var host_url="http://localhost:1913/"
-            emp_data={host_url: host_url}
-            res.render('payroll',emp_data);
-            console.log(host_url);
+    res.render("../secret/payroll");
 })
 
-app.get('/edit-details/:id',function(req,res)
+app.get("/secret/logout",function(req,res)
+{
+    if(req.session.isAuthenticated)
+    {
+        req.session.destroy(function(err)
+        {
+            if(err)
+            {
+                console.log(err)
+            }
+            else
+            {
+                res.redirect("../login")
+            }
+        })
+    }
+})
+
+app.get('/login',function(req,res)
+{
+    res.render("login")
+})
+
+app.get('/secret/edit-details/:id',function(req,res)
 {
     var emp_id=req.params.id;
-    mysqlConnection.query("select * from test where id='"+emp_id+"'",function(err,result)
+    mysqlConnection.query("select * from payroll_management where id='"+emp_id+"'",function(err,result)
     {
         if(err)
         {
@@ -53,18 +91,14 @@ app.get('/edit-details/:id',function(req,res)
         else
         {
             emp_data={my_data :result}
-            res.render('edit-details',emp_data);
+            res.render('../secret/edit-details',emp_data);
         }
     })
 })
 
-app.post('/edit-details/modifyDetails/:id',urlencodedParser,function(req,res)
+app.post('/loginAction',urlencodedParser,function(req,res)
 {
-    var date_string=now.toString()
-    console.log(req.body);
-    console.log(date_string)
-    var emp_id=req.params.id
-    mysqlConnection.query("update test set date='"+req.body.date+"', employee_id='"+req.body.employee_id+"', employee_name='"+req.body.employee_name+"', designation_id='"+req.body.designation+"', annual_ctc='"+req.body.annual_ctc+"', professional_tax='"+req.body.professional_tax+"', income_tax='"+req.body.income_tax+"', provident_fund='"+req.body.provident_fund+"',esic='"+req.body.esic+"' where id='"+emp_id+"'",function(err,result)
+    mysqlConnection.query("select id,count(*) AS Count_rows from user where USERNAME='"+req.body.username+"' and PASSWORD='"+req.body.password+"'",function(err,result)
     {
         if(err)
         {
@@ -72,14 +106,23 @@ app.post('/edit-details/modifyDetails/:id',urlencodedParser,function(req,res)
         }
         else
         {
-            console.log("updated successfully")
+            var count_rows=result[0].Count_rows
+            if(count_rows!=1)
+            {
+                req.session.isAuthenticated=false
+                res.render('login-fail')
+            }
+            else
+            {
+                req.session.isAuthenticated=true
+                res.redirect('../secret/payroll')
+            }
         }
     })
-    res.redirect("/contact-success");
 })
 
-app.get('/contact-success', function(req, res) {
-    mysqlConnection.query("select * from  test order by id desc limit 0,10",function(err,result){
+app.get('/secret/contact-success', function(req, res) {
+    mysqlConnection.query("select * from  payroll_management order by id desc limit 0,10",function(err,result){
         if(err)
         {
             throw err
@@ -87,15 +130,10 @@ app.get('/contact-success', function(req, res) {
         else
         {
             obj = {print: result};
-            res.render('contact-success', obj);
+            res.render('../secret/contact-success', obj);
         }
     })
   });
-
-app.get('/employee',function(req,res)
-{
-    res.render('employee')
-})
 
 app.listen(port,()=> console.log("express server running"))
 
@@ -107,7 +145,7 @@ app.get('/prev',function(req,res)
     {
         page_no=page_no-1;
         new_limit=(page_no*10);
-        mysqlConnection.query("select * from test order by id desc limit "+new_limit+",10",function(err,result)
+        mysqlConnection.query("select * from payroll_management order by id desc limit "+new_limit+",10",function(err,result)
     {
         if(err)
         {
@@ -123,7 +161,7 @@ app.get('/prev',function(req,res)
     }
     else
     {
-        mysqlConnection.query("select * from test order by id desc limit 0,10",function(err,result)
+        mysqlConnection.query("select * from payroll_management order by id desc limit 0,10",function(err,result)
     {
         if(err)
         {
@@ -144,7 +182,7 @@ app.get('/next',function(req,res)
     var new_limit;
     page_no=page_no+1;
     new_limit=(page_no*10);
-        mysqlConnection.query("select * from test order by id desc limit "+new_limit+",10",function(err,result)
+        mysqlConnection.query("select * from payroll_management order by id desc limit "+new_limit+",10",function(err,result)
     {
         if(err)
         {
@@ -158,10 +196,30 @@ app.get('/next',function(req,res)
     })
 })
 
-app.post('/myaction',urlencodedParser,(req,res)=>{
+app.post('/secret/edit-details/modifyDetails/:id',urlencodedParser,function(req,res)
+{
+    var date_string=now.toString()
+    console.log(req.body);
+    console.log(date_string)
+    var emp_id=req.params.id
+    mysqlConnection.query("update payroll_management set TRANSACTION_DATE='"+req.body.date+"', EMP_ID='"+req.body.employee_id+"',BASIC_SALARY='"+req.body.basic_salary+"', HRA='"+req.body.hra+"', SA='"+req.body.sa+"', PROFESSIONA_TAX='"+req.body.professional_tax+"', TAX_DETUCTION_FROM_SORCE='"+req.body.tax_source+"', STANDARD_DETUCTION='"+req.body.standard_deduction+"', OTHERS_DETUCTION='"+req.body.other_deductions+"', NET_AMOUNT='"+req.body.net_amount+"' where ID='"+emp_id+"'",function(err,result)
+    {
+        if(err)
+        {
+            throw err
+        }
+        else
+        {
+            console.log("updated successfully")
+        }
+    })
+    res.redirect("/secret/contact-success");
+})
+
+app.post('/secret/myaction',urlencodedParser,(req,res)=>{
     req.body.date=now.toString()
     console.log(req.body)
-    mysqlConnection.query("insert into test (id, date, employee_id, employee_name, designation_id, annual_ctc, professional_tax, income_tax, provident_fund, esic) values ('','"+req.body.date+"','"+req.body.employee_id+"','"+req.body.employee_name+"','"+req.body.designation+"','"+req.body.annual_ctc+"','"+req.body.professional_tax+"','"+req.body.income_tax+"','"+req.body.provident_fund+"','"+req.body.esic+"')",
+    mysqlConnection.query("insert into payroll_management (ID, EMP_ID, TRANSACTION_DATE, BASIC_SALARY, HRA, SA, PROFESSIONA_TAX, TAX_DETUCTION_FROM_SORCE, STANDARD_DETUCTION, OTHERS_DETUCTION, NET_AMOUNT) values ('','"+req.body.employee_id+"','"+req.body.date+"','"+req.body.basic_salary+"','"+req.body.hra+"','"+req.body.sa+"','"+req.body.professional_tax+"','"+req.body.tax_source+"','"+req.body.standard_deduction+"','"+req.body.other_deductions+"','"+req.body.net_amount+"')",
     function(err)
     {
         if(err)
@@ -173,5 +231,5 @@ app.post('/myaction',urlencodedParser,(req,res)=>{
             console.log('added succesfully')
         }
     })
-    res.redirect("/contact-success");
+    res.redirect("../secret/contact-success");
 })
