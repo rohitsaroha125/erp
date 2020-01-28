@@ -3,6 +3,7 @@ const express=require('express')
 var path=require("path")
 var ejs=require('ejs')
 const session=require('express-session')
+const cookieParser = require('cookie-parser');
 
 var app=express();
 const port = process.env.PORT || 1915;
@@ -13,12 +14,13 @@ app.set('view engine', 'ejs');
 var urlencodedParser = bodyParser.urlencoded({ extended: false });
 
 app.use(session({secret: 'qweasdzxc',saveUninitialized:true, resave: false}))
+app.use(cookieParser());
 
 var dir = path.join(__dirname, 'public');
 
 var authenticate=function(req,res,next)
 {
-    if(req.session.isAuthenticated)
+    if(req.session.isAuthenticated || req.cookies['name'])
     {
         return next()
     }
@@ -51,15 +53,18 @@ app.all("/",function(req,res){
     res.redirect("secret/payroll");
 })
 
+
 app.get('/secret/payroll',function(req,res)
 {
+    console.log(req.cookies['name'])
     res.render("../secret/payroll");
 })
 
 app.get("/secret/logout",function(req,res)
 {
-    if(req.session.isAuthenticated)
+    if(req.session.isAuthenticated || req.cookies['name'])
     {
+        res.clearCookie('name');
         req.session.destroy(function(err)
         {
             if(err)
@@ -115,6 +120,7 @@ app.post('/loginAction',urlencodedParser,function(req,res)
             else
             {
                 req.session.isAuthenticated=true
+                res.cookie('name', 'true', {expire: 36000000 + Date.now()});
                 res.redirect('../secret/payroll')
             }
         }
