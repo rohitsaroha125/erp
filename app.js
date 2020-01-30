@@ -60,9 +60,47 @@ app.get('/secret/payroll',function(req,res)
     res.render("../secret/payroll");
 })
 
+app.get('/fetch_id',function(req,res)
+{
+    var emp_id=req.query.send_data
+    mysqlConnection.query("select count(*) as count_emp from employee where ID='"+emp_id+"'",function(err1,result1){
+        if(err1)
+        {
+            throw err1
+        }
+        else
+        {
+            console.log(result1[0].count_emp)
+            if(result1[0].count_emp==0)
+            {
+                console.log(result1)
+                res.send("Employee doesn't exist")
+                console.log("employee doesn't exist")
+            }
+            else
+            {
+                mysqlConnection.query("select count(*) as Count_id from payroll_management  where EMP_ID='"+emp_id+"'",function(err,result)
+                {
+                    if(err)
+                    {
+                        throw err
+                    }
+                    else
+                    {
+                        if(result[0].Count_id!=0)
+                    {
+                        res.send("Employee Payroll already exists")
+                    }
+                }
+            })
+            }
+        }
+    })
+})
+
 app.get("/secret/logout",function(req,res)
 {
-    if(req.session.isAuthenticated || req.cookies['name'])
+    if(req.session.isAuthenticated || req.cookies['name']==1)
     {
         res.clearCookie('name');
         req.session.destroy(function(err)
@@ -120,7 +158,7 @@ app.post('/loginAction',urlencodedParser,function(req,res)
             else
             {
                 req.session.isAuthenticated=true
-                res.cookie('name', 'true', {expire: 36000000 + Date.now()});
+                res.cookie('name', result[0].id, {expire: 36000000 + Date.now()});
                 res.redirect('../secret/payroll')
             }
         }
@@ -224,7 +262,6 @@ app.post('/secret/edit-details/modifyDetails/:id',urlencodedParser,function(req,
 
 app.post('/secret/myaction',urlencodedParser,(req,res)=>{
     req.body.date=now.toString()
-    console.log(req.body)
     mysqlConnection.query("insert into payroll_management (ID, EMP_ID, TRANSACTION_DATE, BASIC_SALARY, HRA, SA, PROFESSIONA_TAX, TAX_DETUCTION_FROM_SORCE, STANDARD_DETUCTION, OTHERS_DETUCTION, NET_AMOUNT) values ('','"+req.body.employee_id+"','"+req.body.date+"','"+req.body.basic_salary+"','"+req.body.hra+"','"+req.body.sa+"','"+req.body.professional_tax+"','"+req.body.tax_source+"','"+req.body.standard_deduction+"','"+req.body.other_deductions+"','"+req.body.net_amount+"')",
     function(err)
     {
